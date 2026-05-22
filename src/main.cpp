@@ -19,19 +19,20 @@ int main()
 
         BeginDrawing();
 
-        ClearBackground(DARKGRAY); // ceiling
-        DrawRectangle(0, 300, 800, 300, BLACK); // floor
+        ClearBackground({40, 40, 40, 255});
+        DrawRectangle(0, 300, 800, 300, {20, 20, 20, 255});
 
-        engine.Draw3D(player, map);
+        engine.DrawGame(player, map);
 
-        DrawLine(400 - 10, 300, 400 + 10, 300, GREEN); // crosshair
-        DrawLine(400, 300 - 10, 400, 300 + 10, GREEN);
+        DrawLine(400 - 8, 300, 400 + 8, 300, GREEN);
+        DrawLine(400, 300 - 8, 400, 300 + 8, GREEN);
 
-        DrawFPS(10, 10); // HUD
+        DrawText("ARTHUR", 10, 10, 24, GOLD);
+        DrawFPS(720, 10);
 
         EndDrawing();
     }
 
-    CloseWindow();
+    engine.Unload();
     return 0;
 }

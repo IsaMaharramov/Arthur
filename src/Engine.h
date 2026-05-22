@@ -13,8 +13,34 @@ private:
     float maxDepth = 16.0f;
 
     Texture2D wallTexture;
-    Texture2D enemySpriteSheet;
-    int enemyFrameCount = 11;
+    Texture2D texIdle;
+    Texture2D texDeath;
+    Texture2D texFly;
+    Texture2D texAttack;
+
+    Texture2D LoadWizardTexture(const char *localPath, const char *buildPath)
+    {
+        const char *actualPath = FileExists(buildPath) ? buildPath : (FileExists(localPath) ? localPath : nullptr);
+        if (actualPath)
+        {
+            Image img = LoadImage(actualPath);
+            Color *pixels = LoadImageColors(img);
+            Color bgColor = pixels[0];
+            UnloadImageColors(pixels);
+
+            Color transparent = {0, 0, 0, 0};
+            ImageColorReplace(&img, bgColor, transparent);
+
+            Texture2D tex = LoadTextureFromImage(img);
+            UnloadImage(img);
+            SetTextureFilter(tex, TEXTURE_FILTER_POINT);
+            return tex;
+        }
+        Image img = GenImageChecked(64, 64, 8, 8, MAGENTA, BLACK);
+        Texture2D tex = LoadTextureFromImage(img);
+        UnloadImage(img);
+        return tex;
+    }
 
 public:
     void Init()
@@ -23,7 +49,6 @@ public:
         SetTargetFPS(60);
 
         const char *wallPath = FileExists("../assets/wall.png") ? "../assets/wall.png" : "assets/wall.png";
-
         if (FileExists(wallPath))
         {
             wallTexture = LoadTexture(wallPath);
@@ -36,37 +61,19 @@ public:
             UnloadImage(img);
         }
 
-        const char *spritePath = FileExists("../assets/wizard idle.png") ? "../assets/wizard idle.png" : "assets/wizard idle.png";
-
-        if (FileExists(spritePath))
-        {
-            Image img = LoadImage(spritePath);
-
-            Color *pixels = LoadImageColors(img);
-            Color bgColor = pixels[0];
-            UnloadImageColors(pixels);
-
-            Color transparent = {0, 0, 0, 0};
-            ImageColorReplace(&img, bgColor, transparent);
-
-            enemySpriteSheet = LoadTextureFromImage(img);
-            UnloadImage(img);
-
-            SetTextureFilter(enemySpriteSheet, TEXTURE_FILTER_POINT);
-        }
-        else
-        {
-            Image img = GenImageChecked(64, 64, 8, 8, DARKPURPLE, BLACK);
-            enemySpriteSheet = LoadTextureFromImage(img);
-            UnloadImage(img);
-            enemyFrameCount = 1;
-        }
+        texIdle = LoadWizardTexture("assets/wizard idle.png", "../assets/wizard idle.png");
+        texDeath = LoadWizardTexture("assets/wizard death.png", "../assets/wizard death.png");
+        texFly = LoadWizardTexture("assets/wizard fly forward.png", "../assets/wizard fly forward.png");
+        texAttack = LoadWizardTexture("assets/wizard attack.png", "../assets/wizard attack.png");
     }
 
     void Unload()
     {
         UnloadTexture(wallTexture);
-        UnloadTexture(enemySpriteSheet);
+        UnloadTexture(texIdle);
+        UnloadTexture(texDeath);
+        UnloadTexture(texFly);
+        UnloadTexture(texAttack);
         CloseWindow();
     }
 
@@ -105,7 +112,6 @@ public:
             }
 
             depthBuffer[x] = distanceToWall;
-
             float correctedDistance = distanceToWall * cosf(rayAngle - player.angle);
             if (correctedDistance < 0.1f)
                 correctedDistance = 0.1f;
@@ -142,8 +148,36 @@ public:
 
         for (auto &enemy : map.enemies)
         {
-            if (!enemy.alive)
+            if (enemy.state == STATE_DEAD)
                 continue;
+
+            Texture2D activeSprite = texIdle;
+            int maxFrames = 10;
+            float animSpeed = 0.12f;
+
+            if (enemy.state == STATE_IDLE)
+            {
+                activeSprite = texIdle;
+                maxFrames = 10;
+            }
+            else if (enemy.state == STATE_FLYING)
+            {
+                activeSprite = texFly;
+                maxFrames = 6;
+                animSpeed = 0.10f;
+            }
+            else if (enemy.state == STATE_DYING)
+            {
+                activeSprite = texDeath;
+                maxFrames = 10;
+                animSpeed = 0.20f;
+            }
+            else if (enemy.state == STATE_ATTACK)
+            {
+                activeSprite = texAttack;
+                maxFrames = 8;
+                animSpeed = 0.12f;
+            }
 
             float dx = enemy.x - player.x;
             float dy = enemy.y - player.y;
@@ -166,18 +200,26 @@ public:
                     correctedDist = 0.1f;
                 int enemyHeight = (int)((screenHeight / correctedDist) * 2.0f);
 
-                int frameWidth = enemySpriteSheet.width / enemyFrameCount;
-                float aspectRatio = (float)frameWidth / enemySpriteSheet.height;
+                int frameWidth = activeSprite.width / maxFrames;
+                float aspectRatio = (float)frameWidth / activeSprite.height;
                 int enemyWidth = (int)((float)enemyHeight * aspectRatio);
 
                 int startY = (screenHeight - enemyHeight) / 2;
                 int startX = (int)screenX - (enemyWidth / 2);
 
                 enemy.timeInFrame += deltaTime;
-                if (enemy.timeInFrame > 0.12f)
+                if (enemy.timeInFrame > animSpeed)
                 {
                     enemy.timeInFrame = 0.0f;
-                    enemy.currentFrame = (enemy.currentFrame + 1) % enemyFrameCount;
+                    enemy.currentFrame++;
+
+                    if (enemy.currentFrame >= maxFrames)
+                    {
+                        if (enemy.state == STATE_DYING)
+                            enemy.state = STATE_DEAD;
+                        else
+                            enemy.currentFrame = 0;
+                    }
                 }
 
                 int sourceX = enemy.currentFrame * frameWidth;
@@ -194,10 +236,10 @@ public:
                         float frameXPercent = (float)ex / enemyWidth;
                         float sourceColX = (float)sourceX + frameXPercent * frameWidth;
 
-                        Rectangle colSourceRect = {sourceColX, 0.0f, 1.0f, (float)enemySpriteSheet.height};
+                        Rectangle colSourceRect = {sourceColX, 0.0f, 1.0f, (float)activeSprite.height};
                         Rectangle colDestRect = {(float)drawX, (float)startY, 1.0f, (float)enemyHeight};
 
-                        DrawTexturePro(enemySpriteSheet, colSourceRect, colDestRect, {0, 0}, 0.0f, tint);
+                        DrawTexturePro(activeSprite, colSourceRect, colDestRect, {0, 0}, 0.0f, tint);
                     }
                 }
             }
@@ -205,6 +247,21 @@ public:
 
         if (player.isShooting)
             DrawRectangle(0, 0, screenWidth, screenHeight, {255, 255, 0, 100});
+
+        DrawLine(400 - 8, 300, 400 + 8, 300, GREEN);
+        DrawLine(400, 300 - 8, 400, 300 + 8, GREEN);
+
+        DrawText("ARTHUR", 10, 10, 24, GOLD);
+        DrawFPS(720, 10);
+
+        Color healthColor = (player.health > 40) ? GREEN : RED;
+        DrawText(TextFormat("HEALTH: %d", player.health), screenWidth / 2 - 80, screenHeight - 50, 30, healthColor);
+
+        if (player.health <= 0)
+        {
+            DrawRectangle(0, 0, screenWidth, screenHeight, {150, 0, 0, 180}); // Dark transparent red
+            DrawText("YOU DIED", screenWidth / 2 - 120, screenHeight / 2 - 30, 50, BLACK);
+        }
 
         int mapScale = 6;
         int mapOffsetX = 10;
@@ -218,22 +275,13 @@ public:
                 DrawRectangle(mapOffsetX + mx * mapScale, mapOffsetY + my * mapScale, mapScale - 1, mapScale - 1, tileColor);
             }
         }
-
-        int playerMapX = mapOffsetX + (int)(player.x * (float)mapScale);
-        int playerMapY = mapOffsetY + (int)(player.y * (float)mapScale);
-        DrawCircle(playerMapX, playerMapY, 3, GREEN);
-
-        float targetLineX = (float)playerMapX + sinf(player.angle) * 12.0f;
-        float targetLineY = (float)playerMapY + cosf(player.angle) * 12.0f;
-        DrawLine(playerMapX, playerMapY, (int)targetLineX, (int)targetLineY, GREEN);
+        DrawCircle(mapOffsetX + (int)(player.x * mapScale), mapOffsetY + (int)(player.y * mapScale), 3, GREEN);
 
         for (auto &enemy : map.enemies)
         {
-            if (enemy.alive)
+            if (enemy.state != STATE_DEAD)
             {
-                int enMapX = mapOffsetX + (int)(enemy.x * (float)mapScale);
-                int enMapY = mapOffsetY + (int)(enemy.y * (float)mapScale);
-                DrawRectangle(enMapX - 1, enMapY - 1, 3, 3, RED);
+                DrawRectangle(mapOffsetX + (int)(enemy.x * mapScale) - 1, mapOffsetY + (int)(enemy.y * mapScale) - 1, 3, 3, RED);
             }
         }
     }

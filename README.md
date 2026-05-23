@@ -1,85 +1,107 @@
 # Arthur
 
-A modern, hardware-accelerated 2.5D raycaster game engine built from scratch in C++ using **Raylib**. This project takes the core mathematical principles of early 90s shooters like *Wolfenstein 3D* and upgrades them from a text-based console into a true standalone desktop application.
+A custom-built, pseudo-3D first-person shooter and dungeon crawler written in modern C++ using [Raylib](https://www.raylib.com/). Inspired by classic raycasting engines like *Wolfenstein 3D* and *DOOM*, this project features a fully functional rendering pipeline, finite state machine (FSM) enemy AI, and multi-level progression.
 
----
+![C++](https://img.shields.io/badge/C++-17-blue.svg)
+![Raylib](https://img.shields.io/badge/Raylib-5.0-black.svg)
+![CMake](https://img.shields.io/badge/CMake-Build-green.svg)
 
-## Features
-* **True Pixel Rendering:** Uses GPU-accelerated drawing instead of a locked Windows console grid.
-* **Fisheye Correction:** Implements cosine angle correction to eliminate the "curved wall" lens distortion common in basic raycasters.
-* **Dynamic Lighting:** Real-time distance-based depth shading (walls get darker the further away they are).
-* **Smooth Delta-Time Movement:** Framerate-independent movement logic so the game runs at the exact same speed whether you are hitting 60 FPS or 500 FPS.
-* **Sliding Wall Collisions:** Smooth AABB-style sliding collision handling preventing the player from getting stuck on geometry.
+## Key Features
 
----
+* **Custom Raycasting Engine:** Renders a 2D grid map into a 3D perspective using custom raycasting mathematics, Z-buffering for sprite occlusion, and distance-based depth shading.
+* **Finite State Machine (FSM) AI:** Enemies operate autonomously using a state machine (`Idle`, `Wander`, `Chase`, `Attack`, `Flinch`, `Die`). Enemies roam randomly until the player enters their line of sight.
+* **Diverse Bestiary:** 5 distinct enemy types with unique stats (Speed, Damage, Health, Cooldowns):
+  * 🧙‍♂️ **Wizards:** Standard ranged casters.
+  * 🧌 **Goblins:** Fast, low-health swarmers.
+  * 💀 **Skeletons:** Slow, high-health tanks that deal massive damage.
+  * 🍄 **Mushrooms:** Toxic, high-health ambushers.
+  * 👁️ **Flying Eyes:** Extremely fast, agile swarmers.
+* **Multi-Level Progression:** 5 distinct levels, escalating from tight corridors to a massive 60x60 open-arena horde survival finale.
+* **Dynamic HUD & Radar:** Real-time minimap with color-coded enemy tracking and player field-of-view indicators.
+* **Audio Streaming:** Continuous background music streaming using Raylib's hardware audio device integration.
+
+## Tech Stack & Dependencies
+
+* **Language:** C++17
+* **Graphics & Audio API:** Raylib 
+* **Build System:** CMake
+* **Platform:** Windows / Linux / macOS
+
+## Build Instructions
+
+This project uses CMake for cross-platform building. Raylib is automatically fetched and linked via CMake's `FetchContent` module, meaning you do not need to install Raylib manually.
+
+### Prerequisites
+* A C++17 compatible compiler (MSVC, GCC, or Clang)
+* [CMake](https://cmake.org/download/) (v3.15 or higher)
+
+### Compiling from Source
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/IsaMaharramov/Arthur.git
+   cd Arthur
+   ```
+2. **Generate build files:**
+   ```bash
+   mkdir build
+   cd build
+   cmake ..
+   ```
+3. **Build the executable:**
+   ```bash
+   cmake --build .
+   ```
+4. **Run the game:**
+   ```powerShell
+   # On Windows
+   .\Debug\Arthur.exe
+
+   # On Linux/macOS
+   ./Arthur
+   ```
+>Note: Ensure the `assets/` folder remains in the project root. The engine uses relative pathing (`../assets/`) to locate textures and audio from the build directory.
 
 ## Project Structure
 
-```text
-Arthur/
-├── src/
-│   ├── main.cpp       # Game loop initialization & frame dispatching
-│   ├── Engine.h       # Raycasting algorithm & core rendering pipeline
-│   ├── Player.h       # Input handling, movement, and collision math
-│   └── Map.h          # Grid layout definitions & collision checking
-├── assets/            # Future textures, audio, and font files
-└── CMakeLists.txt     # Modern CMake configuration build file
+```plaintext
+ArthurEngine/
+├── assets/                 # Textures, sprite sheets, and audio files
+│   ├── goblin/
+│   ├── skeleton/
+│   ├── mushroom/
+│   ├── flying_eye/
+│   └── ...
+├── src/                    # C++ Source Code
+│   ├── main.cpp            # Game loop and level transition logic
+│   ├── Engine.h            # Rendering pipeline, HUD, and Audio manager
+│   ├── Map.h               # Level generation, collision, and AI routing
+│   ├── Player.h            # Input handling, movement, and raycast shooting
+│   └── Enemy.h             # Data structures and Enums for the FSM
+├── CMakeLists.txt          # CMake configuration and dependency fetching
+└── README.md               # Project documentation
 ```
----
+
 ## Controls
-| Key | Action |
-| :--- | :--- |
-| **W** | Walk Forward |
-| **S** | Walk Backward |
-| **A** | Strafe / Turn Left |
-| **D** | Strafe / Turn Right |
-| **Esc** | Exit Game |
----
-## How to Build and Run
-This project uses CMake to completely automate the setup process. It will automatically download, compile, and link the required `raylib` binaries behind the scenes.
+* **W / S:** Move Forward / Backward
 
-### Prerequisites
-Make sure you have a C++ compiler installed (GCC, Clang, or MSVC via Visual Studio) and CMake (version 3.11 or higher).
+* **A / D:** Rotate Camera Left / Right
 
-### Compilation Steps
+* **Left Mouse Button:** Fire Weapon
 
-1. Open your terminal/command prompt and navigate to the project directory:
+* **ESC:** Exit Game
 
-```bash
-   cd path/to/Arthur
-```
+## Contributing
 
-2. Create and enter a build directory:
+Any contributions you make are **greatly appreciated**.
 
-```bash
-   mkdir build && cd build
-```
+If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement". 
 
-3. Generate the build files:
+See [`CONTRIBUTING.md`](/CONTRIBUTING.md) for more details.
 
-```bash
-   cmake ..
-```
+## Credits & Assets
 
-4. Build the executable:
+[Audio and Art Assets](/assets/README.md)
 
-```bash
-   cmake --build .
-```
-
-5. Run the game:
-
-Windows: `.\Debug\Arthur.exe`
-
-Mac/Linux: `./Arthur`
-
----
-
-## Roadmap / Future Implementations
-Wall Textures: Replace solid color rendering with vertical texture mapping.
-
-Mini-Map Overlay: Add a toggleable HUD component showing player position in real-time.
-
-Sprites: Implement a Z-buffer depth system to draw enemies, items, and decorations.
-
-Audio: Integrate background music and directional sound effects for footsteps and impacts.
+## License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

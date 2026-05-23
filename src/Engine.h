@@ -10,15 +10,20 @@ class Engine
 private:
     int screenWidth = 800;
     int screenHeight = 600;
-    float maxDepth = 16.0f;
+    float maxDepth = 30.0f;
 
     Texture2D wallTexture;
-    Texture2D texIdle;
-    Texture2D texDeath;
-    Texture2D texFly;
-    Texture2D texAttack;
 
-    Texture2D LoadWizardTexture(const char *localPath, const char *buildPath)
+    Texture2D wizIdle, wizDeath, wizFly, wizAttack, wizHit;
+    Texture2D gobIdle, gobRun, gobDeath, gobAttack, gobHit;
+    Texture2D skelIdle, skelWalk, skelDeath, skelAttack, skelHit;
+    Texture2D mushIdle, mushRun, mushDeath, mushAttack, mushHit;
+    Texture2D eyeIdle, eyeFly, eyeDeath, eyeAttack, eyeHit;
+
+    Music bgMusic;
+    bool musicLoaded = false;
+
+    Texture2D LoadSprite(const char *localPath, const char *buildPath)
     {
         const char *actualPath = FileExists(buildPath) ? buildPath : (FileExists(localPath) ? localPath : nullptr);
         if (actualPath)
@@ -45,7 +50,8 @@ private:
 public:
     void Init()
     {
-        InitWindow(screenWidth, screenHeight, "Arthur Engine v1.0");
+        InitWindow(screenWidth, screenHeight, "Arthur Engine v7.2 - Stable Audio!");
+        InitAudioDevice();
         SetTargetFPS(60);
 
         const char *wallPath = FileExists("../assets/wall.png") ? "../assets/wall.png" : "assets/wall.png";
@@ -61,24 +67,91 @@ public:
             UnloadImage(img);
         }
 
-        texIdle = LoadWizardTexture("assets/wizard idle.png", "../assets/wizard idle.png");
-        texDeath = LoadWizardTexture("assets/wizard death.png", "../assets/wizard death.png");
-        texFly = LoadWizardTexture("assets/wizard fly forward.png", "../assets/wizard fly forward.png");
-        texAttack = LoadWizardTexture("assets/wizard attack.png", "../assets/wizard attack.png");
+        wizIdle = LoadSprite("assets/wizard idle.png", "../assets/wizard idle.png");
+        wizDeath = LoadSprite("assets/wizard death.png", "../assets/wizard death.png");
+        wizFly = LoadSprite("assets/wizard fly forward.png", "../assets/wizard fly forward.png");
+        wizAttack = LoadSprite("assets/wizard attack.png", "../assets/wizard attack.png");
+        wizHit = wizIdle;
+
+        gobIdle = LoadSprite("assets/goblin/Idle.png", "../assets/goblin/Idle.png");
+        gobDeath = LoadSprite("assets/goblin/Death.png", "../assets/goblin/Death.png");
+        gobRun = LoadSprite("assets/goblin/Run.png", "../assets/goblin/Run.png");
+        gobAttack = LoadSprite("assets/goblin/Attack.png", "../assets/goblin/Attack.png");
+        gobHit = LoadSprite("assets/goblin/Take Hit.png", "../assets/goblin/Take Hit.png");
+
+        skelIdle = LoadSprite("assets/skeleton/Idle.png", "../assets/skeleton/Idle.png");
+        skelDeath = LoadSprite("assets/skeleton/Death.png", "../assets/skeleton/Death.png");
+        skelWalk = LoadSprite("assets/skeleton/Walk.png", "../assets/skeleton/Walk.png");
+        skelAttack = LoadSprite("assets/skeleton/Attack.png", "../assets/skeleton/Attack.png");
+        skelHit = LoadSprite("assets/skeleton/Take Hit.png", "../assets/skeleton/Take Hit.png");
+
+        mushIdle = LoadSprite("assets/mushroom/Idle.png", "../assets/mushroom/Idle.png");
+        mushDeath = LoadSprite("assets/mushroom/Death.png", "../assets/mushroom/Death.png");
+        mushRun = LoadSprite("assets/mushroom/Run.png", "../assets/mushroom/Run.png");
+        mushAttack = LoadSprite("assets/mushroom/Attack.png", "../assets/mushroom/Attack.png");
+        mushHit = LoadSprite("assets/mushroom/Take Hit.png", "../assets/mushroom/Take Hit.png");
+
+        eyeIdle = LoadSprite("assets/flying_eye/Idle.png", "../assets/flying_eye/Idle.png");
+        eyeDeath = LoadSprite("assets/flying_eye/Death.png", "../assets/flying_eye/Death.png");
+        eyeFly = LoadSprite("assets/flying_eye/Flight.png", "../assets/flying_eye/Flight.png");
+        eyeAttack = LoadSprite("assets/flying_eye/Attack.png", "../assets/flying_eye/Attack.png");
+        eyeHit = LoadSprite("assets/flying_eye/Take Hit.png", "../assets/flying_eye/Take Hit.png");
+
+        const char *musicPath = FileExists("../assets/theme.mp3") ? "../assets/theme.mp3" : "assets/theme.mp3";
+        if (FileExists(musicPath))
+        {
+            bgMusic = LoadMusicStream(musicPath);
+            bgMusic.looping = true;
+            PlayMusicStream(bgMusic);
+            SetMusicVolume(bgMusic, 0.4f);
+
+            musicLoaded = true;
+        }
     }
 
     void Unload()
     {
         UnloadTexture(wallTexture);
-        UnloadTexture(texIdle);
-        UnloadTexture(texDeath);
-        UnloadTexture(texFly);
-        UnloadTexture(texAttack);
+        UnloadTexture(wizIdle);
+        UnloadTexture(wizDeath);
+        UnloadTexture(wizFly);
+        UnloadTexture(wizAttack);
+        UnloadTexture(gobIdle);
+        UnloadTexture(gobDeath);
+        UnloadTexture(gobRun);
+        UnloadTexture(gobAttack);
+        UnloadTexture(gobHit);
+        UnloadTexture(skelIdle);
+        UnloadTexture(skelDeath);
+        UnloadTexture(skelWalk);
+        UnloadTexture(skelAttack);
+        UnloadTexture(skelHit);
+        UnloadTexture(mushIdle);
+        UnloadTexture(mushDeath);
+        UnloadTexture(mushRun);
+        UnloadTexture(mushAttack);
+        UnloadTexture(mushHit);
+        UnloadTexture(eyeIdle);
+        UnloadTexture(eyeDeath);
+        UnloadTexture(eyeFly);
+        UnloadTexture(eyeAttack);
+        UnloadTexture(eyeHit);
+
+        if (musicLoaded)
+            UnloadMusicStream(bgMusic);
+        CloseAudioDevice();
+
         CloseWindow();
     }
 
     void DrawGame(Player &player, Map &map, float deltaTime)
     {
+
+        if (musicLoaded)
+        {
+            UpdateMusicStream(bgMusic);
+        }
+
         std::vector<float> depthBuffer(screenWidth, 0.0f);
 
         for (int x = 0; x < screenWidth; x++)
@@ -151,32 +224,174 @@ public:
             if (enemy.state == STATE_DEAD)
                 continue;
 
-            Texture2D activeSprite = texIdle;
-            int maxFrames = 10;
-            float animSpeed = 0.12f;
+            Texture2D activeSprite;
+            int maxFrames = 8;
+            float animSpeed = 0.10f;
 
-            if (enemy.state == STATE_IDLE)
+            if (enemy.type == TYPE_WIZARD)
             {
-                activeSprite = texIdle;
-                maxFrames = 10;
+                if (enemy.state == STATE_IDLE)
+                {
+                    activeSprite = wizIdle;
+                    maxFrames = 10;
+                    animSpeed = 0.12f;
+                }
+                else if (enemy.state == STATE_FLYING)
+                {
+                    activeSprite = wizFly;
+                    maxFrames = 6;
+                    animSpeed = 0.10f;
+                }
+                else if (enemy.state == STATE_ATTACK)
+                {
+                    activeSprite = wizAttack;
+                    maxFrames = 8;
+                    animSpeed = 0.12f;
+                }
+                else if (enemy.state == STATE_TAKE_HIT)
+                {
+                    activeSprite = wizHit;
+                    maxFrames = 4;
+                    animSpeed = 0.08f;
+                }
+                else if (enemy.state == STATE_DYING)
+                {
+                    activeSprite = wizDeath;
+                    maxFrames = 10;
+                    animSpeed = 0.20f;
+                }
             }
-            else if (enemy.state == STATE_FLYING)
+            else if (enemy.type == TYPE_GOBLIN)
             {
-                activeSprite = texFly;
-                maxFrames = 6;
-                animSpeed = 0.10f;
+                if (enemy.state == STATE_IDLE)
+                {
+                    activeSprite = gobIdle;
+                    maxFrames = 4;
+                    animSpeed = 0.12f;
+                }
+                else if (enemy.state == STATE_FLYING)
+                {
+                    activeSprite = gobRun;
+                    maxFrames = 8;
+                    animSpeed = 0.08f;
+                }
+                else if (enemy.state == STATE_ATTACK)
+                {
+                    activeSprite = gobAttack;
+                    maxFrames = 8;
+                    animSpeed = 0.12f;
+                }
+                else if (enemy.state == STATE_TAKE_HIT)
+                {
+                    activeSprite = gobHit;
+                    maxFrames = 4;
+                    animSpeed = 0.08f;
+                }
+                else if (enemy.state == STATE_DYING)
+                {
+                    activeSprite = gobDeath;
+                    maxFrames = 4;
+                    animSpeed = 0.15f;
+                }
             }
-            else if (enemy.state == STATE_DYING)
+            else if (enemy.type == TYPE_SKELETON)
             {
-                activeSprite = texDeath;
-                maxFrames = 10;
-                animSpeed = 0.20f;
+                if (enemy.state == STATE_IDLE)
+                {
+                    activeSprite = skelIdle;
+                    maxFrames = 4;
+                    animSpeed = 0.12f;
+                }
+                else if (enemy.state == STATE_FLYING)
+                {
+                    activeSprite = skelWalk;
+                    maxFrames = 4;
+                    animSpeed = 0.15f;
+                }
+                else if (enemy.state == STATE_ATTACK)
+                {
+                    activeSprite = skelAttack;
+                    maxFrames = 8;
+                    animSpeed = 0.12f;
+                }
+                else if (enemy.state == STATE_TAKE_HIT)
+                {
+                    activeSprite = skelHit;
+                    maxFrames = 4;
+                    animSpeed = 0.08f;
+                }
+                else if (enemy.state == STATE_DYING)
+                {
+                    activeSprite = skelDeath;
+                    maxFrames = 4;
+                    animSpeed = 0.20f;
+                }
             }
-            else if (enemy.state == STATE_ATTACK)
+            else if (enemy.type == TYPE_MUSHROOM)
             {
-                activeSprite = texAttack;
-                maxFrames = 8;
-                animSpeed = 0.12f;
+                if (enemy.state == STATE_IDLE)
+                {
+                    activeSprite = mushIdle;
+                    maxFrames = 4;
+                    animSpeed = 0.12f;
+                }
+                else if (enemy.state == STATE_FLYING)
+                {
+                    activeSprite = mushRun;
+                    maxFrames = 8;
+                    animSpeed = 0.10f;
+                }
+                else if (enemy.state == STATE_ATTACK)
+                {
+                    activeSprite = mushAttack;
+                    maxFrames = 8;
+                    animSpeed = 0.12f;
+                }
+                else if (enemy.state == STATE_TAKE_HIT)
+                {
+                    activeSprite = mushHit;
+                    maxFrames = 4;
+                    animSpeed = 0.08f;
+                }
+                else if (enemy.state == STATE_DYING)
+                {
+                    activeSprite = mushDeath;
+                    maxFrames = 4;
+                    animSpeed = 0.15f;
+                }
+            }
+            else if (enemy.type == TYPE_EYE)
+            {
+                if (enemy.state == STATE_IDLE)
+                {
+                    activeSprite = eyeIdle;
+                    maxFrames = 8;
+                    animSpeed = 0.10f;
+                }
+                else if (enemy.state == STATE_FLYING)
+                {
+                    activeSprite = eyeFly;
+                    maxFrames = 8;
+                    animSpeed = 0.08f;
+                }
+                else if (enemy.state == STATE_ATTACK)
+                {
+                    activeSprite = eyeAttack;
+                    maxFrames = 8;
+                    animSpeed = 0.08f;
+                }
+                else if (enemy.state == STATE_TAKE_HIT)
+                {
+                    activeSprite = eyeHit;
+                    maxFrames = 4;
+                    animSpeed = 0.08f;
+                }
+                else if (enemy.state == STATE_DYING)
+                {
+                    activeSprite = eyeDeath;
+                    maxFrames = 4;
+                    animSpeed = 0.15f;
+                }
             }
 
             float dx = enemy.x - player.x;
@@ -217,6 +432,8 @@ public:
                     {
                         if (enemy.state == STATE_DYING)
                             enemy.state = STATE_DEAD;
+                        else if (enemy.state == STATE_TAKE_HIT)
+                            enemy.state = STATE_IDLE;
                         else
                             enemy.currentFrame = 0;
                     }
@@ -226,7 +443,12 @@ public:
                 unsigned char shade = (unsigned char)(255.0f - (dist / maxDepth) * 150.0f);
                 if (dist > maxDepth)
                     shade = 10;
+
                 Color tint = {shade, shade, shade, 255};
+                if (enemy.state == STATE_TAKE_HIT)
+                {
+                    tint = {255, shade, shade, 255};
+                }
 
                 for (int ex = 0; ex < enemyWidth; ex++)
                 {
@@ -251,7 +473,21 @@ public:
         DrawLine(400 - 8, 300, 400 + 8, 300, GREEN);
         DrawLine(400, 300 - 8, 400, 300 + 8, GREEN);
 
-        DrawText("ARTHUR", 10, 10, 24, GOLD);
+        DrawText(TextFormat("LEVEL: %d", map.currentLevel), 10, 10, 24, GOLD);
+
+        int killsRequired = 10;
+        if (map.currentLevel == 1)
+            killsRequired = 8;
+        if (map.currentLevel == 2)
+            killsRequired = 10;
+        if (map.currentLevel == 3)
+            killsRequired = 20;
+        if (map.currentLevel == 4)
+            killsRequired = 25;
+        if (map.currentLevel == 5)
+            killsRequired = 40;
+
+        DrawText(TextFormat("KILLS: %d / %d", player.killCount, killsRequired), 10, 40, 20, LIGHTGRAY);
         DrawFPS(720, 10);
 
         Color healthColor = (player.health > 40) ? GREEN : RED;
@@ -259,13 +495,18 @@ public:
 
         if (player.health <= 0)
         {
-            DrawRectangle(0, 0, screenWidth, screenHeight, {150, 0, 0, 180}); // Dark transparent red
+            DrawRectangle(0, 0, screenWidth, screenHeight, {150, 0, 0, 180});
             DrawText("YOU DIED", screenWidth / 2 - 120, screenHeight / 2 - 30, 50, BLACK);
         }
+        else if (map.currentLevel == 5 && player.killCount >= 40)
+        {
+            DrawRectangle(0, 0, screenWidth, screenHeight, {0, 150, 0, 180});
+            DrawText("YOU SURVIVED THE DUNGEON!", screenWidth / 2 - 350, screenHeight / 2 - 30, 50, BLACK);
+        }
 
-        int mapScale = 6;
+        int mapScale = (map.currentLevel <= 2) ? 6 : 3;
         int mapOffsetX = 10;
-        int mapOffsetY = 40;
+        int mapOffsetY = 80;
 
         for (int mx = 0; mx < map.width; mx++)
         {
@@ -281,7 +522,19 @@ public:
         {
             if (enemy.state != STATE_DEAD)
             {
-                DrawRectangle(mapOffsetX + (int)(enemy.x * mapScale) - 1, mapOffsetY + (int)(enemy.y * mapScale) - 1, 3, 3, RED);
+                Color dotColor;
+                if (enemy.type == TYPE_WIZARD)
+                    dotColor = RED;
+                else if (enemy.type == TYPE_GOBLIN)
+                    dotColor = ORANGE;
+                else if (enemy.type == TYPE_SKELETON)
+                    dotColor = LIGHTGRAY;
+                else if (enemy.type == TYPE_MUSHROOM)
+                    dotColor = PURPLE;
+                else
+                    dotColor = SKYBLUE;
+
+                DrawRectangle(mapOffsetX + (int)(enemy.x * mapScale) - 1, mapOffsetY + (int)(enemy.y * mapScale) - 1, 3, 3, dotColor);
             }
         }
     }

@@ -15,9 +15,44 @@ int main()
     {
         float deltaTime = GetFrameTime();
 
-        player.Update(deltaTime, map);
+        if (player.killCount >= 8 && map.currentLevel == 1)
+        {
+            map.LoadLevel(2);
+            player.killCount = 0;
+            player.x = 2.5f;
+            player.y = 2.5f;
+            player.health = 100;
+        }
+        else if (player.killCount >= 10 && map.currentLevel == 2)
+        {
+            map.LoadLevel(3);
+            player.killCount = 0;
+            player.x = 2.5f;
+            player.y = 2.5f;
+            player.health = 100;
+        }
+        else if (player.killCount >= 20 && map.currentLevel == 3)
+        {
+            map.LoadLevel(4);
+            player.killCount = 0;
+            player.x = 2.5f;
+            player.y = 2.5f;
+            player.health = 100;
+        }
+        else if (player.killCount >= 25 && map.currentLevel == 4)
+        {
+            map.LoadLevel(5);
+            player.killCount = 0;
+            player.x = 2.5f;
+            player.y = 2.5f;
+            player.health = 100;
+        }
 
-        map.UpdateEnemies(player.x, player.y, player.health, deltaTime);
+        if (!(map.currentLevel == 5 && player.killCount >= 40))
+        {
+            player.Update(deltaTime, map);
+            map.UpdateEnemies(player.x, player.y, player.health, deltaTime);
+        }
 
         BeginDrawing();
 

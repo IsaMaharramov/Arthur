@@ -6,6 +6,14 @@ A custom-built, pseudo-3D first-person shooter and dungeon crawler written in mo
 ![Raylib](https://img.shields.io/badge/Raylib-5.0-black.svg)
 ![CMake](https://img.shields.io/badge/CMake-Build-green.svg)
 
+## Gameplay Highlights
+
+![tea1](images/tea1.png)
+
+![tea2](images/tea2.png)
+
+![tea3](images/tea3.png)
+
 ## Key Features
 
 * **Custom Raycasting Engine:** Renders a 2D grid map into a 3D perspective using custom raycasting mathematics, Z-buffering for sprite occlusion, and distance-based depth shading.
@@ -35,10 +43,10 @@ This project uses CMake for cross-platform building. Raylib is automatically fet
 * A C++17 compatible compiler (MSVC, GCC, or Clang)
 * [CMake](https://cmake.org/download/) (v3.15 or higher)
 
-### Compiling from Source
+### Compiling from Sourced
 
 1. **Clone the repository:**
-   ```bash
+   ```bashx 
    git clone https://github.com/IsaMaharramov/Arthur.git
    cd Arthur
    ```
